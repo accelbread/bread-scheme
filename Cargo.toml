@@ -1,0 +1,12 @@
+[package]
+name = "bread-scheme"
+version = "0.1.0"
+authors = ["Archit Gupta <accelbread@gmail.com>"]
+edition = "2021"
+description = "R7RS Scheme interpreter."
+repository = "https://github.com/accelbread/bread-scheme"
+license = "AGPL-3.0-or-later"
+keywords = ["scheme"]
+categories = ["command-line-utilities"]
+
+[dependencies]
