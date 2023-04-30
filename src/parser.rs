@@ -95,12 +95,13 @@ enum ParseState {
 
 fn make_list(vec: Vec<Box<Object>>) -> Object {
     let mut iter = vec.into_iter().rev();
+    let last = iter.next().unwrap();
     let mut prev = Object::Cons(
         match iter.next() {
             Some(e) => e,
             None => return Object::Nil,
         },
-        Box::new(Object::Nil),
+        last,
     );
     for e in iter {
         prev = Object::Cons(e, Box::new(prev));
@@ -151,7 +152,10 @@ pub fn read(input: &mut Input<impl Read>) -> Object {
             },
             ParseState::List(mut v) => match c {
                 Some(b'\n' | b' ') => ParseState::List(v),
-                Some(b')') => return make_list(v),
+                Some(b')') => {
+                    v.push(Box::new(Object::Nil));
+                    return make_list(v);
+                }
                 Some(b'.') => ParseState::MaybeDot(v),
                 Some(c) => {
                     input.push(c);
@@ -162,6 +166,7 @@ pub fn read(input: &mut Input<impl Read>) -> Object {
             },
             ParseState::MaybeDot(mut v) => match c {
                 Some(b'\n' | b' ') => {
+                    assert!(!v.is_empty(), "Error parsing list: unexpected `.`");
                     v.push(Box::new(read(input)));
                     ParseState::ListEnd(v)
                 }
