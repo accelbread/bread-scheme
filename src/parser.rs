@@ -142,7 +142,7 @@ pub fn read(input: &mut Input<impl Read>) -> Object {
         let c = input.get();
         state = match state {
             ParseState::None => match c {
-                Some(b'\n' | b' ') => ParseState::None,
+                Some(b' ' | b'\t' | b'\n') => ParseState::None,
                 Some(b'(') => ParseState::List(Vec::new()),
                 Some(b'"') => ParseState::String(Vec::new()),
                 Some(b'\'') => {
@@ -172,7 +172,7 @@ pub fn read(input: &mut Input<impl Read>) -> Object {
                 None => panic!("Error parsing list: unexpected EOF."),
             },
             ParseState::MaybeDot(mut v) => match c {
-                Some(b'\n' | b' ') => {
+                Some(b' ' | b'\t' | b'\n') => {
                     assert!(!v.is_empty(), "Error parsing list: unexpected `.`");
                     v.push(Box::new(read(input)));
                     ParseState::ListEnd(v)
@@ -186,13 +186,13 @@ pub fn read(input: &mut Input<impl Read>) -> Object {
                 None => panic!("Error parsing list: unexpected EOF."),
             },
             ParseState::ListEnd(v) => match c {
-                Some(b'\n' | b' ') => ParseState::ListEnd(v),
+                Some(b' ' | b'\t' | b'\n') => ParseState::ListEnd(v),
                 Some(b')') => return make_list(v),
                 Some(_) => panic!("Error parsing list: expected `)`."),
                 None => panic!("Error parsing list: unexpected EOF."),
             },
             ParseState::Int(mut v) => match c {
-                Some(c @ (b' ' | b'\n' | b'(' | b')')) => {
+                Some(c @ (b' ' | b'\t' | b'\n' | b'(' | b')')) => {
                     input.push(c);
                     return make_int(&v);
                 }
