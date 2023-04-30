@@ -19,6 +19,7 @@
 //! R7RS Scheme interpreter
 
 #![warn(missing_docs, clippy::pedantic, clippy::cargo)]
+#![allow(clippy::similar_names)]
 
 mod parser;
 mod types;
@@ -39,7 +40,25 @@ fn print(value: &Object) {
         Object::Eof => (),
         Object::String(x) => print!("\"{x}\""),
         Object::Int64(x) => print!("{x}"),
+        Object::Nil => print!("()"),
+        Object::Cons(car, cdr) => print_cons(car, cdr),
     };
+}
+
+fn print_cons(car: &Object, mut cdr: &Object) {
+    print!("(");
+    print(car);
+    while let Object::Cons(cdar, cddr) = cdr {
+        print!(" ");
+        print(cdar);
+        cdr = cddr;
+    }
+    if let Object::Nil = cdr {
+    } else {
+        print!(" . ");
+        print(cdr);
+    }
+    print!(")");
 }
 
 fn main() {

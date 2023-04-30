@@ -82,6 +82,27 @@ enum ParseState {
     None,
     Int(i64),
     String(Vec<u8>),
+    // Avoid unneeded copy of Object as each Vec elem will be boxed when converting to Object
+    #[allow(clippy::vec_box)]
+    List(Vec<Box<Object>>),
+}
+
+impl From<&mut Vec<Box<Object>>> for Object {
+    fn from(value: &mut Vec<Box<Object>>) -> Self {
+        let vec = std::mem::take(value);
+        let mut iter = vec.into_iter().rev();
+        let mut prev = Object::Cons(
+            match iter.next() {
+                Some(e) => e,
+                None => return Object::Nil,
+            },
+            Box::new(Object::Nil),
+        );
+        for e in iter {
+            prev = Object::Cons(e, Box::new(prev));
+        }
+        prev
+    }
 }
 
 pub fn read(input: &mut Input<impl Read>) -> Object {
@@ -93,6 +114,7 @@ pub fn read(input: &mut Input<impl Read>) -> Object {
                 Some(b'\n' | b' ') => ParseState::None,
                 Some(c @ b'0'..=b'9') => ParseState::Int((c - b'0').into()),
                 Some(b'"') => ParseState::String(Vec::new()),
+                Some(b'(') => ParseState::List(Vec::new()),
                 Some(c) => panic!("Parse error: unexpected char: [{}].", c.escape_ascii()),
                 None => return Object::Eof,
             },
@@ -118,6 +140,16 @@ pub fn read(input: &mut Input<impl Read>) -> Object {
                     ParseState::String(v)
                 }
                 None => panic!("Error parsing string: unexpected EOF."),
+            },
+            ParseState::List(mut v) => match c {
+                Some(b'\n' | b' ') => ParseState::List(v),
+                Some(b')') => return (&mut v).into(),
+                Some(c) => {
+                    input.push(c);
+                    v.push(Box::new(read(input)));
+                    ParseState::List(v)
+                }
+                None => panic!("Error parsing list: unexpected char EOF."),
             },
         };
     }
