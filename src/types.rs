@@ -18,9 +18,10 @@
 
 #[derive(Debug, Clone)]
 pub enum Object {
-    Eof,
-    Int64(i64),
-    String(String),
     Nil,
     Cons(Box<Object>, Box<Object>),
+    Symbol(String),
+    Int64(i64),
+    String(String),
+    Eof,
 }

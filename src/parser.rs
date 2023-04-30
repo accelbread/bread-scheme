@@ -16,6 +16,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#![allow(clippy::vec_box)]
+
 use crate::types::Object;
 use std::{
     io::{BufReader, ErrorKind, Read},
@@ -78,31 +80,49 @@ impl<'a, S: Read> Input<'a, S> {
     }
 }
 
+#[derive(Default)]
 enum ParseState {
+    #[default]
     None,
-    Int(i64),
-    String(Vec<u8>),
-    // Avoid unneeded copy of Object as each Vec elem will be boxed when converting to Object
-    #[allow(clippy::vec_box)]
     List(Vec<Box<Object>>),
+    Int(Vec<u8>),
+    Symbol(Vec<u8>),
+    String(Vec<u8>),
 }
 
-impl From<&mut Vec<Box<Object>>> for Object {
-    fn from(value: &mut Vec<Box<Object>>) -> Self {
-        let vec = std::mem::take(value);
-        let mut iter = vec.into_iter().rev();
-        let mut prev = Object::Cons(
-            match iter.next() {
-                Some(e) => e,
-                None => return Object::Nil,
-            },
-            Box::new(Object::Nil),
-        );
-        for e in iter {
-            prev = Object::Cons(e, Box::new(prev));
-        }
-        prev
+fn make_list(vec: Vec<Box<Object>>) -> Object {
+    let mut iter = vec.into_iter().rev();
+    let mut prev = Object::Cons(
+        match iter.next() {
+            Some(e) => e,
+            None => return Object::Nil,
+        },
+        Box::new(Object::Nil),
+    );
+    for e in iter {
+        prev = Object::Cons(e, Box::new(prev));
     }
+    prev
+}
+
+fn make_symbol(vec: Vec<u8>) -> Object {
+    Object::Symbol(
+        String::from_utf8(vec).unwrap_or_else(|e| panic!("Error parsing identifier: {e}.")),
+    )
+}
+
+fn make_int(vec: Vec<u8>) -> Object {
+    let mut i = 0i64;
+    for c in vec {
+        i = i * 10 + i64::from(c - b'0');
+    }
+    Object::Int64(i)
+}
+
+fn make_string(vec: Vec<u8>) -> Object {
+    Object::String(
+        String::from_utf8(vec).unwrap_or_else(|e| panic!("Error parsing identifier: {e}.")),
+    )
 }
 
 pub fn read(input: &mut Input<impl Read>) -> Object {
@@ -112,44 +132,53 @@ pub fn read(input: &mut Input<impl Read>) -> Object {
         state = match state {
             ParseState::None => match c {
                 Some(b'\n' | b' ') => ParseState::None,
-                Some(c @ b'0'..=b'9') => ParseState::Int((c - b'0').into()),
-                Some(b'"') => ParseState::String(Vec::new()),
                 Some(b'(') => ParseState::List(Vec::new()),
-                Some(c) => panic!("Parse error: unexpected char: [{}].", c.escape_ascii()),
+                Some(b'"') => ParseState::String(Vec::new()),
+                Some(c @ b'0'..=b'9') => ParseState::Int(vec![c]),
+                Some(c) => ParseState::Symbol(vec![c]),
                 None => return Object::Eof,
             },
-            ParseState::Int(v) => match c {
-                Some(c @ b'0'..=b'9') => ParseState::Int(v * 10 + i64::from(c - b'0')),
+            ParseState::List(mut v) => match c {
+                Some(b'\n' | b' ') => ParseState::List(v),
+                Some(b')') => return make_list(v),
+                Some(c) => {
+                    input.push(c);
+                    v.push(Box::new(read(input)));
+                    ParseState::List(v)
+                }
+                None => panic!("Error parsing list: unexpected EOF."),
+            },
+            ParseState::Int(mut v) => match c {
                 Some(c @ (b' ' | b'\n' | b')')) => {
                     input.push(c);
-                    return Object::Int64(v);
+                    return make_int(v);
                 }
-                Some(c) => panic!("Parse error: unexpected char [{}].", c.escape_ascii()),
-                None => return Object::Int64(v),
+                Some(c @ b'0'..=b'9') => {
+                    v.push(c);
+                    ParseState::Int(v)
+                }
+                Some(_) => ParseState::Symbol(v),
+                None => return make_int(v),
+            },
+            ParseState::Symbol(mut v) => match c {
+                Some(c @ (b' ' | b'\n' | b')')) => {
+                    input.push(c);
+                    return make_symbol(v);
+                }
+                Some(c) => {
+                    v.push(c);
+                    ParseState::Symbol(v)
+                }
+                None => return make_symbol(v),
             },
             ParseState::String(mut v) => match c {
-                Some(b'"') => {
-                    return Object::String(
-                        String::from_utf8(v)
-                            .unwrap_or_else(|e| panic!("Error parsing string: {e}.")),
-                    )
-                }
+                Some(b'"') => return make_string(v),
                 Some(b'\\') => ParseState::String(v),
                 Some(c) => {
                     v.push(c);
                     ParseState::String(v)
                 }
                 None => panic!("Error parsing string: unexpected EOF."),
-            },
-            ParseState::List(mut v) => match c {
-                Some(b'\n' | b' ') => ParseState::List(v),
-                Some(b')') => return (&mut v).into(),
-                Some(c) => {
-                    input.push(c);
-                    v.push(Box::new(read(input)));
-                    ParseState::List(v)
-                }
-                None => panic!("Error parsing list: unexpected char EOF."),
             },
         };
     }

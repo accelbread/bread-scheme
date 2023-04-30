@@ -37,11 +37,12 @@ fn eval(value: &Object) -> Object {
 
 fn print(value: &Object) {
     match value {
-        Object::Eof => (),
-        Object::String(x) => print!("\"{x}\""),
-        Object::Int64(x) => print!("{x}"),
-        Object::Nil => print!("()"),
         Object::Cons(car, cdr) => print_cons(car, cdr),
+        Object::Nil => print!("()"),
+        Object::Symbol(x) => print!("{x}"),
+        Object::Int64(x) => print!("{x}"),
+        Object::String(x) => print!("\"{x}\""),
+        Object::Eof => (),
     };
 }
 
