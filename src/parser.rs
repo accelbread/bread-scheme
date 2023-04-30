@@ -145,6 +145,13 @@ pub fn read(input: &mut Input<impl Read>) -> Object {
                 Some(b'\n' | b' ') => ParseState::None,
                 Some(b'(') => ParseState::List(Vec::new()),
                 Some(b'"') => ParseState::String(Vec::new()),
+                Some(b'\'') => {
+                    return make_list(vec![
+                        Box::new(Object::Symbol("quote".to_string())),
+                        Box::new(read(input)),
+                        Box::new(Object::Nil),
+                    ]);
+                }
                 Some(b')') => panic!("Error parsing: unexpected `)`."),
                 Some(c @ (b'0'..=b'9' | b'-' | b'+')) => ParseState::Int(vec![c]),
                 Some(c) => ParseState::Symbol(vec![c]),
