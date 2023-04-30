@@ -26,25 +26,25 @@ use std::{
 
 pub struct Input<'a, S: Read> {
     stream: BufReader<&'a mut S>,
-    buf: Option<u8>,
+    buf: [Option<u8>; 2],
 }
 
 impl<'a, S: Read> Input<'a, S> {
     pub fn new(stream: &'a mut S) -> Self {
         Self {
             stream: BufReader::new(stream),
-            buf: None,
+            buf: [None, None],
         }
     }
 
     fn get(&mut self) -> Option<u8> {
-        if let Some(b) = self.buf {
-            self.buf = None;
-            Some(b)
+        if let Some(c) = self.buf[0] {
+            self.buf[0] = std::mem::take(&mut self.buf[1]);
+            Some(c)
         } else {
-            let mut b = 0u8;
-            match self.stream.read_exact(slice::from_mut(&mut b)) {
-                Ok(_) => Some(b),
+            let mut c = 0u8;
+            match self.stream.read_exact(slice::from_mut(&mut c)) {
+                Ok(_) => Some(c),
                 Err(e) => match e.kind() {
                     ErrorKind::UnexpectedEof => None,
                     _ => panic!("Input error: {e}"),
@@ -54,14 +54,15 @@ impl<'a, S: Read> Input<'a, S> {
     }
 
     fn push(&mut self, byte: u8) {
-        self.buf = match self.buf {
-            None => Some(byte),
-            Some(_) => panic!("Pushing byte onto input existing pushed byte."),
+        self.buf[1] = match self.buf[1] {
+            None => self.buf[0],
+            Some(_) => panic!("Pushing byte onto input with no space."),
         };
+        self.buf[0] = Some(byte);
     }
 
     pub fn has_pending(&self) -> bool {
-        self.buf.is_some() || !self.stream.buffer().is_empty()
+        self.buf[0].is_some() || !self.stream.buffer().is_empty()
     }
 
     pub fn clear_pending_space(&mut self) {
@@ -85,6 +86,8 @@ enum ParseState {
     #[default]
     None,
     List(Vec<Box<Object>>),
+    MaybeDot(Vec<Box<Object>>),
+    ListEnd(Vec<Box<Object>>),
     Int(Vec<u8>),
     Symbol(Vec<u8>),
     String(Vec<u8>),
@@ -134,6 +137,7 @@ pub fn read(input: &mut Input<impl Read>) -> Object {
                 Some(b'\n' | b' ') => ParseState::None,
                 Some(b'(') => ParseState::List(Vec::new()),
                 Some(b'"') => ParseState::String(Vec::new()),
+                Some(b')') => panic!("Error parsing: unexpected `)`."),
                 Some(c @ b'0'..=b'9') => ParseState::Int(vec![c]),
                 Some(c) => ParseState::Symbol(vec![c]),
                 None => return Object::Eof,
@@ -141,6 +145,7 @@ pub fn read(input: &mut Input<impl Read>) -> Object {
             ParseState::List(mut v) => match c {
                 Some(b'\n' | b' ') => ParseState::List(v),
                 Some(b')') => return make_list(v),
+                Some(b'.') => ParseState::MaybeDot(v),
                 Some(c) => {
                     input.push(c);
                     v.push(Box::new(read(input)));
@@ -148,8 +153,27 @@ pub fn read(input: &mut Input<impl Read>) -> Object {
                 }
                 None => panic!("Error parsing list: unexpected EOF."),
             },
+            ParseState::MaybeDot(mut v) => match c {
+                Some(b'\n' | b' ') => {
+                    v.push(Box::new(read(input)));
+                    ParseState::ListEnd(v)
+                }
+                Some(c) => {
+                    input.push(b'.');
+                    input.push(c);
+                    v.push(Box::new(read(input)));
+                    ParseState::List(v)
+                }
+                None => panic!("Error parsing list: unexpected EOF."),
+            },
+            ParseState::ListEnd(v) => match c {
+                Some(b'\n' | b' ') => ParseState::ListEnd(v),
+                Some(b')') => return make_list(v),
+                Some(_) => panic!("Error parsing list: expected `)`."),
+                None => panic!("Error parsing list: unexpected EOF."),
+            },
             ParseState::Int(mut v) => match c {
-                Some(c @ (b' ' | b'\n' | b')')) => {
+                Some(c @ (b' ' | b'\n' | b'(' | b')')) => {
                     input.push(c);
                     return make_int(v);
                 }
@@ -161,7 +185,7 @@ pub fn read(input: &mut Input<impl Read>) -> Object {
                 None => return make_int(v),
             },
             ParseState::Symbol(mut v) => match c {
-                Some(c @ (b' ' | b'\n' | b')')) => {
+                Some(c @ (b' ' | b'\n' | b'(' | b')')) => {
                     input.push(c);
                     return make_symbol(v);
                 }
