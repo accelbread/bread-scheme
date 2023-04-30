@@ -16,39 +16,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! R7RS Scheme interpreter
-
-#![warn(missing_docs, clippy::pedantic, clippy::cargo)]
-
-mod eval;
-mod parser;
-mod printer;
-mod types;
-
-use crate::eval::eval;
-use crate::parser::read;
-use crate::printer::print;
 use crate::types::Object;
-use std::{
-    io::{self, Write},
-    process::exit,
-};
 
-fn main() {
-    println!("Welcome to Bread Scheme!");
-    let mut handle = &mut io::stdin().lock();
-    let mut input = parser::Input::new(&mut handle);
-    loop {
-        if !input.has_pending() {
-            print!(">>> ");
-            let _ = io::stdout().flush();
-        }
-        let parsed = &read(&mut input);
-        if let Object::Eof = parsed {
-            exit(0);
-        }
-        print(&eval(parsed));
-        println!();
-        input.clear_pending_space();
-    }
+pub fn eval(value: &Object) -> Object {
+    value.clone()
 }
