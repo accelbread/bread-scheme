@@ -114,10 +114,17 @@ fn make_symbol(vec: Vec<u8>) -> Object {
     )
 }
 
-fn make_int(vec: Vec<u8>) -> Object {
+fn make_int(mut v: &[u8]) -> Object {
     let mut i = 0i64;
-    for c in vec {
+    let negative = v[0] == b'-';
+    if let b'-' | b'+' = v[0] {
+        v = &v[1..];
+    }
+    for c in v {
         i = i * 10 + i64::from(c - b'0');
+    }
+    if negative {
+        i *= -1;
     }
     Object::Int64(i)
 }
@@ -138,7 +145,7 @@ pub fn read(input: &mut Input<impl Read>) -> Object {
                 Some(b'(') => ParseState::List(Vec::new()),
                 Some(b'"') => ParseState::String(Vec::new()),
                 Some(b')') => panic!("Error parsing: unexpected `)`."),
-                Some(c @ b'0'..=b'9') => ParseState::Int(vec![c]),
+                Some(c @ (b'0'..=b'9' | b'-' | b'+')) => ParseState::Int(vec![c]),
                 Some(c) => ParseState::Symbol(vec![c]),
                 None => return Object::Eof,
             },
@@ -175,14 +182,14 @@ pub fn read(input: &mut Input<impl Read>) -> Object {
             ParseState::Int(mut v) => match c {
                 Some(c @ (b' ' | b'\n' | b'(' | b')')) => {
                     input.push(c);
-                    return make_int(v);
+                    return make_int(&v);
                 }
                 Some(c @ b'0'..=b'9') => {
                     v.push(c);
                     ParseState::Int(v)
                 }
                 Some(_) => ParseState::Symbol(v),
-                None => return make_int(v),
+                None => return make_int(&v),
             },
             ParseState::Symbol(mut v) => match c {
                 Some(c @ (b' ' | b'\n' | b'(' | b')')) => {
