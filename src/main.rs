@@ -20,6 +20,43 @@
 
 #![warn(missing_docs, clippy::pedantic, clippy::cargo)]
 
+mod parser;
+mod types;
+
+use crate::parser::read;
+use crate::types::Object;
+use std::{
+    io::{self, Write},
+    process::exit,
+};
+
+fn eval(value: &Object) -> Object {
+    value.clone()
+}
+
+fn print(value: &Object) {
+    match value {
+        Object::Eof => (),
+        Object::String(x) => print!("\"{x}\""),
+        Object::Int64(x) => print!("{x}"),
+    };
+}
+
 fn main() {
-    println!("Hello world!");
+    println!("Welcome to Bread Scheme!");
+    let mut handle = &mut io::stdin().lock();
+    let mut input = parser::Input::new(&mut handle);
+    loop {
+        if !input.has_pending() {
+            print!(">>> ");
+            let _ = io::stdout().flush();
+        }
+        let parsed = &read(&mut input);
+        if let Object::Eof = parsed {
+            exit(0);
+        }
+        print(&eval(parsed));
+        println!();
+        input.clear_pending_space();
+    }
 }
