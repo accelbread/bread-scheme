@@ -16,34 +16,11 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#![allow(clippy::similar_names)]
-
 use crate::types::Object;
 use std::cell::RefCell;
 
-pub fn print(value: &'static RefCell<Object>) {
-    match *value.borrow() {
-        Object::Cons(car, cdr) => print_cons(car, cdr),
-        Object::Nil => print!("()"),
-        Object::Symbol(ref x) => print!("{x}"),
-        Object::Int64(x) => print!("{x}"),
-        Object::String(ref x) => print!("\"{x}\""),
-        Object::Eof => (),
-    };
-}
+// Freeing memory is a future problem
 
-fn print_cons(car: &'static RefCell<Object>, mut cdr: &'static RefCell<Object>) {
-    print!("(");
-    print(car);
-    while let Object::Cons(cdar, cddr) = *cdr.borrow() {
-        print!(" ");
-        print(cdar);
-        cdr = cddr;
-    }
-    if let Object::Nil = *cdr.borrow() {
-    } else {
-        print!(" . ");
-        print(cdr);
-    }
-    print!(")");
+pub fn create(value: Object) -> &'static RefCell<Object> {
+    Box::leak(Box::new(RefCell::new(value)))
 }

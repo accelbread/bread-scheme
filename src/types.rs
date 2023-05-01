@@ -16,10 +16,12 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use std::cell::RefCell;
+
 #[derive(Debug, Clone)]
 pub enum Object {
     Nil,
-    Cons(Box<Object>, Box<Object>),
+    Cons(&'static RefCell<Object>, &'static RefCell<Object>),
     Symbol(String),
     Int64(i64),
     String(String),

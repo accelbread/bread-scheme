@@ -21,6 +21,7 @@
 #![warn(missing_docs, clippy::pedantic, clippy::cargo)]
 
 mod eval;
+mod gc;
 mod parser;
 mod printer;
 mod types;
@@ -43,11 +44,11 @@ fn main() {
             print!(">>> ");
             let _ = io::stdout().flush();
         }
-        let parsed = &read(&mut input);
-        if let Object::Eof = parsed {
+        let parsed = read(&mut input);
+        if let Object::Eof = *parsed.borrow() {
             exit(0);
         }
-        print(&eval(parsed));
+        print(eval(parsed));
         println!();
         input.clear_pending_space();
     }

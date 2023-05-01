@@ -18,8 +18,9 @@
 
 #![allow(clippy::vec_box)]
 
-use crate::types::Object;
+use crate::{gc, types::Object};
 use std::{
+    cell::RefCell,
     io::{BufReader, ErrorKind, Read},
     slice,
 };
@@ -85,37 +86,37 @@ impl<'a, S: Read> Input<'a, S> {
 enum ParseState {
     #[default]
     None,
-    List(Vec<Box<Object>>),
-    MaybeDot(Vec<Box<Object>>),
-    ListEnd(Vec<Box<Object>>),
+    List(Vec<&'static RefCell<Object>>),
+    MaybeDot(Vec<&'static RefCell<Object>>),
+    ListEnd(Vec<&'static RefCell<Object>>),
     Int(Vec<u8>),
     Symbol(Vec<u8>),
     String(Vec<u8>),
 }
 
-fn make_list(vec: Vec<Box<Object>>) -> Object {
+fn make_list(vec: Vec<&'static RefCell<Object>>) -> &'static RefCell<Object> {
     let mut iter = vec.into_iter().rev();
     let last = iter.next().unwrap();
-    let mut prev = Object::Cons(
+    let mut prev = gc::create(Object::Cons(
         match iter.next() {
             Some(e) => e,
-            None => return Object::Nil,
+            None => return gc::create(Object::Nil),
         },
         last,
-    );
+    ));
     for e in iter {
-        prev = Object::Cons(e, Box::new(prev));
+        prev = gc::create(Object::Cons(e, prev));
     }
     prev
 }
 
-fn make_symbol(vec: Vec<u8>) -> Object {
-    Object::Symbol(
+fn make_symbol(vec: Vec<u8>) -> &'static RefCell<Object> {
+    gc::create(Object::Symbol(
         String::from_utf8(vec).unwrap_or_else(|e| panic!("Error parsing identifier: {e}.")),
-    )
+    ))
 }
 
-fn make_int(mut v: &[u8]) -> Object {
+fn make_int(mut v: &[u8]) -> &'static RefCell<Object> {
     let mut i = 0i64;
     let negative = v[0] == b'-';
     if let b'-' | b'+' = v[0] {
@@ -127,16 +128,16 @@ fn make_int(mut v: &[u8]) -> Object {
     if negative {
         i *= -1;
     }
-    Object::Int64(i)
+    gc::create(Object::Int64(i))
 }
 
-fn make_string(vec: Vec<u8>) -> Object {
-    Object::String(
+fn make_string(vec: Vec<u8>) -> &'static RefCell<Object> {
+    gc::create(Object::String(
         String::from_utf8(vec).unwrap_or_else(|e| panic!("Error parsing identifier: {e}.")),
-    )
+    ))
 }
 
-pub fn read(input: &mut Input<impl Read>) -> Object {
+pub fn read(input: &mut Input<impl Read>) -> &'static RefCell<Object> {
     let mut state = ParseState::None;
     loop {
         let c = input.get();
@@ -147,26 +148,26 @@ pub fn read(input: &mut Input<impl Read>) -> Object {
                 Some(b'"') => ParseState::String(Vec::new()),
                 Some(b'\'') => {
                     return make_list(vec![
-                        Box::new(Object::Symbol("quote".to_string())),
-                        Box::new(read(input)),
-                        Box::new(Object::Nil),
+                        gc::create(Object::Symbol("quote".to_string())),
+                        read(input),
+                        gc::create(Object::Nil),
                     ]);
                 }
                 Some(b')') => panic!("Error parsing: unexpected `)`."),
                 Some(c @ (b'0'..=b'9' | b'-' | b'+')) => ParseState::Int(vec![c]),
                 Some(c) => ParseState::Symbol(vec![c]),
-                None => return Object::Eof,
+                None => return gc::create(Object::Eof),
             },
             ParseState::List(mut v) => match c {
                 Some(b'\n' | b' ') => ParseState::List(v),
                 Some(b')') => {
-                    v.push(Box::new(Object::Nil));
+                    v.push(gc::create(Object::Nil));
                     return make_list(v);
                 }
                 Some(b'.') => ParseState::MaybeDot(v),
                 Some(c) => {
                     input.push(c);
-                    v.push(Box::new(read(input)));
+                    v.push(read(input));
                     ParseState::List(v)
                 }
                 None => panic!("Error parsing list: unexpected EOF."),
@@ -174,13 +175,13 @@ pub fn read(input: &mut Input<impl Read>) -> Object {
             ParseState::MaybeDot(mut v) => match c {
                 Some(b' ' | b'\t' | b'\n') => {
                     assert!(!v.is_empty(), "Error parsing list: unexpected `.`");
-                    v.push(Box::new(read(input)));
+                    v.push(read(input));
                     ParseState::ListEnd(v)
                 }
                 Some(c) => {
                     input.push(b'.');
                     input.push(c);
-                    v.push(Box::new(read(input)));
+                    v.push(read(input));
                     ParseState::List(v)
                 }
                 None => panic!("Error parsing list: unexpected EOF."),

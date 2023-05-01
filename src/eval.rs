@@ -17,7 +17,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::types::Object;
+use std::cell::RefCell;
 
-pub fn eval(value: &Object) -> Object {
-    value.clone()
+pub fn eval(value: &'static RefCell<Object>) -> &'static RefCell<Object> {
+    value
 }
