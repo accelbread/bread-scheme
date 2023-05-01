@@ -21,6 +21,7 @@ use std::cell::RefCell;
 
 // Freeing memory is a future problem
 
+#[inline]
 pub fn create(value: Object) -> &'static RefCell<Object> {
     Box::leak(Box::new(RefCell::new(value)))
 }
