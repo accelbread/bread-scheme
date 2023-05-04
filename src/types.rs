@@ -27,8 +27,28 @@ use std::{
 pub struct Handle(Rc<RefCell<Object>>);
 
 impl Handle {
-    pub fn new(value: Object) -> Self {
-        Handle(Rc::new(RefCell::new(value)))
+    pub fn new_nil() -> Self {
+        Handle(Rc::new(RefCell::new(Object::Nil)))
+    }
+
+    pub fn new_cons(car: Handle, cdr: Handle) -> Self {
+        Handle(Rc::new(RefCell::new(Object::Cons(car, cdr))))
+    }
+
+    pub fn new_symbol(value: String) -> Self {
+        Handle(Rc::new(RefCell::new(Object::Symbol(value))))
+    }
+
+    pub fn new_int64(value: i64) -> Self {
+        Handle(Rc::new(RefCell::new(Object::Int64(value))))
+    }
+
+    pub fn new_string(value: String) -> Self {
+        Handle(Rc::new(RefCell::new(Object::String(value))))
+    }
+
+    pub fn new_eof() -> Self {
+        Handle(Rc::new(RefCell::new(Object::Eof)))
     }
 
     pub fn borrow(&self) -> Ref<Object> {

@@ -19,6 +19,7 @@
 //! R7RS Scheme interpreter
 
 #![warn(missing_docs, clippy::pedantic, clippy::cargo)]
+#![allow(clippy::similar_names)]
 
 mod eval;
 mod parser;

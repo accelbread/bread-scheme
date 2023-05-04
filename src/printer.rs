@@ -16,8 +16,6 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#![allow(clippy::similar_names)]
-
 use crate::types::{Handle, Object};
 
 pub fn print(value: &Handle) {

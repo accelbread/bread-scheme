@@ -18,7 +18,7 @@
 
 #![allow(clippy::vec_box)]
 
-use crate::types::{Handle, Object};
+use crate::types::Handle;
 use std::{
     io::{BufReader, ErrorKind, Read},
     slice,
@@ -96,23 +96,23 @@ enum ParseState {
 fn make_list(vec: Vec<Handle>) -> Handle {
     let mut iter = vec.into_iter().rev();
     let last = iter.next().unwrap();
-    let mut prev = Handle::new(Object::Cons(
+    let mut prev = Handle::new_cons(
         match iter.next() {
             Some(e) => e,
-            None => return Handle::new(Object::Nil),
+            None => return Handle::new_nil(),
         },
         last,
-    ));
+    );
     for e in iter {
-        prev = Handle::new(Object::Cons(e, prev));
+        prev = Handle::new_cons(e, prev);
     }
     prev
 }
 
 fn make_symbol(vec: Vec<u8>) -> Handle {
-    Handle::new(Object::Symbol(
+    Handle::new_symbol(
         String::from_utf8(vec).unwrap_or_else(|e| panic!("Error parsing identifier: {e}.")),
-    ))
+    )
 }
 
 fn make_int(mut v: &[u8]) -> Handle {
@@ -127,13 +127,13 @@ fn make_int(mut v: &[u8]) -> Handle {
     if negative {
         i *= -1;
     }
-    Handle::new(Object::Int64(i))
+    Handle::new_int64(i)
 }
 
 fn make_string(vec: Vec<u8>) -> Handle {
-    Handle::new(Object::String(
+    Handle::new_string(
         String::from_utf8(vec).unwrap_or_else(|e| panic!("Error parsing identifier: {e}.")),
-    ))
+    )
 }
 
 pub fn read(input: &mut Input<impl Read>) -> Handle {
@@ -147,20 +147,20 @@ pub fn read(input: &mut Input<impl Read>) -> Handle {
                 Some(b'"') => ParseState::String(Vec::new()),
                 Some(b'\'') => {
                     return make_list(vec![
-                        Handle::new(Object::Symbol("quote".to_string())),
+                        Handle::new_symbol("quote".to_string()),
                         read(input),
-                        Handle::new(Object::Nil),
+                        Handle::new_nil(),
                     ]);
                 }
                 Some(b')') => panic!("Error parsing: unexpected `)`."),
                 Some(c @ (b'0'..=b'9' | b'-' | b'+')) => ParseState::Int(vec![c]),
                 Some(c) => ParseState::Symbol(vec![c]),
-                None => return Handle::new(Object::Eof),
+                None => return Handle::new_eof(),
             },
             ParseState::List(mut v) => match c {
                 Some(b'\n' | b' ') => ParseState::List(v),
                 Some(b')') => {
-                    v.push(Handle::new(Object::Nil));
+                    v.push(Handle::new_nil());
                     return make_list(v);
                 }
                 Some(b'.') => ParseState::MaybeDot(v),
