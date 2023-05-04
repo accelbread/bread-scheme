@@ -18,12 +18,11 @@
 
 #![allow(clippy::similar_names)]
 
-use crate::types::Object;
-use std::cell::RefCell;
+use crate::types::{Handle, Object};
 
-pub fn print(value: &'static RefCell<Object>) {
+pub fn print(value: &Handle) {
     match *value.borrow() {
-        Object::Cons(car, cdr) => print_cons(car, cdr),
+        Object::Cons(ref car, ref cdr) => print_cons(car, cdr),
         Object::Nil => print!("()"),
         Object::Symbol(ref x) => print!("{x}"),
         Object::Int64(x) => print!("{x}"),
@@ -32,15 +31,16 @@ pub fn print(value: &'static RefCell<Object>) {
     };
 }
 
-fn print_cons(car: &'static RefCell<Object>, mut cdr: &'static RefCell<Object>) {
+fn print_cons(car: &Handle, cdr: &Handle) {
     print!("(");
     print(car);
-    while let Object::Cons(cdar, cddr) = *cdr.borrow() {
+    let mut next = cdr.clone();
+    while let Object::Cons(ref car, ref cdr) = *next.clone().borrow() {
         print!(" ");
-        print(cdar);
-        cdr = cddr;
+        print(car);
+        next = cdr.clone();
     }
-    if let Object::Nil = *cdr.borrow() {
+    if let Object::Nil = *next.borrow() {
     } else {
         print!(" . ");
         print(cdr);

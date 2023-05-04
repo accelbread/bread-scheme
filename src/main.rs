@@ -21,7 +21,6 @@
 #![warn(missing_docs, clippy::pedantic, clippy::cargo)]
 
 mod eval;
-mod gc;
 mod parser;
 mod printer;
 mod types;
@@ -48,7 +47,7 @@ fn main() {
         if let Object::Eof = *parsed.borrow() {
             exit(0);
         }
-        print(eval(parsed));
+        print(&eval(parsed));
         println!();
         input.clear_pending_space();
     }

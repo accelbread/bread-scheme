@@ -18,9 +18,8 @@
 
 #![allow(clippy::vec_box)]
 
-use crate::{gc, types::Object};
+use crate::types::{Handle, Object};
 use std::{
-    cell::RefCell,
     io::{BufReader, ErrorKind, Read},
     slice,
 };
@@ -86,37 +85,37 @@ impl<'a, S: Read> Input<'a, S> {
 enum ParseState {
     #[default]
     None,
-    List(Vec<&'static RefCell<Object>>),
-    MaybeDot(Vec<&'static RefCell<Object>>),
-    ListEnd(Vec<&'static RefCell<Object>>),
+    List(Vec<Handle>),
+    MaybeDot(Vec<Handle>),
+    ListEnd(Vec<Handle>),
     Int(Vec<u8>),
     Symbol(Vec<u8>),
     String(Vec<u8>),
 }
 
-fn make_list(vec: Vec<&'static RefCell<Object>>) -> &'static RefCell<Object> {
+fn make_list(vec: Vec<Handle>) -> Handle {
     let mut iter = vec.into_iter().rev();
     let last = iter.next().unwrap();
-    let mut prev = gc::create(Object::Cons(
+    let mut prev = Handle::new(Object::Cons(
         match iter.next() {
             Some(e) => e,
-            None => return gc::create(Object::Nil),
+            None => return Handle::new(Object::Nil),
         },
         last,
     ));
     for e in iter {
-        prev = gc::create(Object::Cons(e, prev));
+        prev = Handle::new(Object::Cons(e, prev));
     }
     prev
 }
 
-fn make_symbol(vec: Vec<u8>) -> &'static RefCell<Object> {
-    gc::create(Object::Symbol(
+fn make_symbol(vec: Vec<u8>) -> Handle {
+    Handle::new(Object::Symbol(
         String::from_utf8(vec).unwrap_or_else(|e| panic!("Error parsing identifier: {e}.")),
     ))
 }
 
-fn make_int(mut v: &[u8]) -> &'static RefCell<Object> {
+fn make_int(mut v: &[u8]) -> Handle {
     let mut i = 0i64;
     let negative = v[0] == b'-';
     if let b'-' | b'+' = v[0] {
@@ -128,16 +127,16 @@ fn make_int(mut v: &[u8]) -> &'static RefCell<Object> {
     if negative {
         i *= -1;
     }
-    gc::create(Object::Int64(i))
+    Handle::new(Object::Int64(i))
 }
 
-fn make_string(vec: Vec<u8>) -> &'static RefCell<Object> {
-    gc::create(Object::String(
+fn make_string(vec: Vec<u8>) -> Handle {
+    Handle::new(Object::String(
         String::from_utf8(vec).unwrap_or_else(|e| panic!("Error parsing identifier: {e}.")),
     ))
 }
 
-pub fn read(input: &mut Input<impl Read>) -> &'static RefCell<Object> {
+pub fn read(input: &mut Input<impl Read>) -> Handle {
     let mut state = ParseState::None;
     loop {
         let c = input.get();
@@ -148,20 +147,20 @@ pub fn read(input: &mut Input<impl Read>) -> &'static RefCell<Object> {
                 Some(b'"') => ParseState::String(Vec::new()),
                 Some(b'\'') => {
                     return make_list(vec![
-                        gc::create(Object::Symbol("quote".to_string())),
+                        Handle::new(Object::Symbol("quote".to_string())),
                         read(input),
-                        gc::create(Object::Nil),
+                        Handle::new(Object::Nil),
                     ]);
                 }
                 Some(b')') => panic!("Error parsing: unexpected `)`."),
                 Some(c @ (b'0'..=b'9' | b'-' | b'+')) => ParseState::Int(vec![c]),
                 Some(c) => ParseState::Symbol(vec![c]),
-                None => return gc::create(Object::Eof),
+                None => return Handle::new(Object::Eof),
             },
             ParseState::List(mut v) => match c {
                 Some(b'\n' | b' ') => ParseState::List(v),
                 Some(b')') => {
-                    v.push(gc::create(Object::Nil));
+                    v.push(Handle::new(Object::Nil));
                     return make_list(v);
                 }
                 Some(b'.') => ParseState::MaybeDot(v),

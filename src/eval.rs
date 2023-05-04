@@ -16,9 +16,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::types::Object;
-use std::cell::RefCell;
+use crate::types::Handle;
 
-pub fn eval(value: &'static RefCell<Object>) -> &'static RefCell<Object> {
+pub fn eval(value: Handle) -> Handle {
     value
 }

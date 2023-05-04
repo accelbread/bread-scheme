@@ -16,12 +16,31 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use std::cell::RefCell;
+use std::{
+    cell::{Ref, RefCell},
+    rc::Rc,
+};
 
-#[derive(Debug, Clone)]
+// Freeing reference cycles is a future problem
+
+#[derive(Clone)]
+pub struct Handle(Rc<RefCell<Object>>);
+
+impl Handle {
+    pub fn new(value: Object) -> Self {
+        Handle(Rc::new(RefCell::new(value)))
+    }
+
+    pub fn borrow(&self) -> Ref<Object> {
+        self.0.borrow()
+    }
+}
+
+#[derive(Clone, Default)]
 pub enum Object {
+    #[default]
     Nil,
-    Cons(&'static RefCell<Object>, &'static RefCell<Object>),
+    Cons(Handle, Handle),
     Symbol(String),
     Int64(i64),
     String(String),
