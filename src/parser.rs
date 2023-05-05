@@ -200,7 +200,10 @@ pub fn read(input: &mut Input<impl Read>) -> Handle {
                     v.push(c);
                     ParseState::Int(v)
                 }
-                Some(_) => ParseState::Symbol(v),
+                Some(c) => {
+                    v.push(c);
+                    ParseState::Symbol(v)
+                }
                 None => return make_int(&v),
             },
             ParseState::Symbol(mut v) => match c {
