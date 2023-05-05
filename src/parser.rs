@@ -204,7 +204,7 @@ pub fn read(input: &mut Input<impl Read>) -> Handle {
                 None => return make_int(&v),
             },
             ParseState::Symbol(mut v) => match c {
-                Some(c @ (b' ' | b'\n' | b'(' | b')')) => {
+                Some(c @ (b' ' | b'\t' | b'\n' | b'(' | b')')) => {
                     input.push(c);
                     return make_symbol(v);
                 }
