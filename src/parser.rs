@@ -110,6 +110,10 @@ fn make_list(vec: Vec<Handle>) -> Handle {
 }
 
 fn make_symbol(vec: Vec<u8>) -> Handle {
+    assert!(
+        (vec.len() != 1) || (vec[0] != b'.'),
+        "Parse error: `.` is not a valid symbol."
+    );
     Handle::new_symbol(
         String::from_utf8(vec).unwrap_or_else(|e| panic!("Error parsing identifier: {e}.")),
     )
