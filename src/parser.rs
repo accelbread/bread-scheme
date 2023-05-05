@@ -136,6 +136,30 @@ fn make_string(vec: Vec<u8>) -> Handle {
     )
 }
 
+fn is_symbol_char(byte: u8) -> bool {
+    matches!(byte, b'a'..=b'z'
+    | b'A'..=b'Z'
+    | b'0'..=b'9'
+    | b'!'
+    | b'$'
+    | b'%'
+    | b'&'
+    | b'*'
+    | b'+'
+    | b'-'
+    | b'.'
+    | b'/'
+    | b':'
+    | b'<'
+    | b'='
+    | b'>'
+    | b'?'
+    | b'@'
+    | b'^'
+    | b'_'
+    | b'~')
+}
+
 pub fn read(input: &mut Input<impl Read>) -> Handle {
     let mut state = ParseState::None;
     loop {
@@ -154,7 +178,8 @@ pub fn read(input: &mut Input<impl Read>) -> Handle {
                 }
                 Some(b')') => panic!("Error parsing: unexpected `)`."),
                 Some(c @ (b'0'..=b'9' | b'-' | b'+')) => ParseState::Int(vec![c]),
-                Some(c) => ParseState::Symbol(vec![c]),
+                Some(c) if is_symbol_char(c) => ParseState::Symbol(vec![c]),
+                Some(c) => panic!("Error parsing: unexpected `{}`.", c.escape_ascii()),
                 None => return Handle::new_eof(),
             },
             ParseState::List(mut v) => match c {
@@ -200,10 +225,11 @@ pub fn read(input: &mut Input<impl Read>) -> Handle {
                     v.push(c);
                     ParseState::Int(v)
                 }
-                Some(c) => {
+                Some(c) if is_symbol_char(c) => {
                     v.push(c);
                     ParseState::Symbol(v)
                 }
+                Some(c) => panic!("Error parsing: unexpected `{}`.", c.escape_ascii()),
                 None => return make_int(&v),
             },
             ParseState::Symbol(mut v) => match c {
@@ -211,10 +237,11 @@ pub fn read(input: &mut Input<impl Read>) -> Handle {
                     input.push(c);
                     return make_symbol(v);
                 }
-                Some(c) => {
+                Some(c) if is_symbol_char(c) => {
                     v.push(c);
                     ParseState::Symbol(v)
                 }
+                Some(c) => panic!("Error parsing: unexpected `{}`.", c.escape_ascii()),
                 None => return make_symbol(v),
             },
             ParseState::String(mut v) => match c {
