@@ -16,32 +16,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::types::{Handle, Object};
+use crate::types::Handle;
 
 pub fn print(value: &Handle) {
-    match *value.borrow() {
-        Object::Cons(ref car, ref cdr) => print_cons(car, cdr),
-        Object::Nil => print!("()"),
-        Object::Symbol(ref x) => print!("{x}"),
-        Object::Int64(x) => print!("{x}"),
-        Object::String(ref x) => print!("\"{x}\""),
-        Object::Eof => (),
-    };
-}
-
-fn print_cons(car: &Handle, cdr: &Handle) {
-    print!("(");
-    print(car);
-    let mut next = cdr.clone();
-    while let Object::Cons(ref car, ref cdr) = *next.clone().borrow() {
-        print!(" ");
-        print(car);
-        next = cdr.clone();
-    }
-    if let Object::Nil = *next.borrow() {
-    } else {
-        print!(" . ");
-        print(cdr);
-    }
-    print!(")");
+    print!("{value}");
 }

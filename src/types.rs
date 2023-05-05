@@ -18,12 +18,24 @@
 
 use std::{
     cell::{Ref, RefCell},
+    fmt::{self, Display},
     rc::Rc,
 };
 
+#[derive(Clone, Default, PartialEq, Eq)]
+pub enum Object {
+    #[default]
+    Nil,
+    Cons(Handle, Handle),
+    Symbol(String),
+    Int64(i64),
+    String(String),
+    Eof,
+}
+
 // Freeing reference cycles is a future problem
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Handle(Rc<RefCell<Object>>);
 
 impl Handle {
@@ -56,13 +68,38 @@ impl Handle {
     }
 }
 
-#[derive(Clone, Default)]
-pub enum Object {
-    #[default]
-    Nil,
-    Cons(Handle, Handle),
-    Symbol(String),
-    Int64(i64),
-    String(String),
-    Eof,
+impl Display for Handle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self.borrow() {
+            Object::Cons(ref car, ref cdr) => write_cons(car, cdr, f),
+            Object::Nil => write!(f, "()"),
+            Object::Symbol(ref x) => write!(f, "{x}"),
+            Object::Int64(x) => write!(f, "{x}"),
+            Object::String(ref x) => write!(f, "\"{x}\""),
+            Object::Eof => write!(f, "#<eof>"),
+        }
+    }
+}
+
+impl fmt::Debug for Handle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Display::fmt(self, f)
+    }
+}
+
+fn write_cons(car: &Handle, cdr: &Handle, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "(")?;
+    car.fmt(f)?;
+    let mut next = cdr.clone();
+    while let Object::Cons(ref car, ref cdr) = *next.clone().borrow() {
+        write!(f, " ")?;
+        car.fmt(f)?;
+        next = cdr.clone();
+    }
+    if let Object::Nil = *next.borrow() {
+    } else {
+        write!(f, " . ")?;
+        next.fmt(f)?;
+    }
+    write!(f, ")")
 }
