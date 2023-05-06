@@ -17,8 +17,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use std::{
-    cell::{Ref, RefCell},
+    cell::RefCell,
     fmt::{self, Display},
+    ops::Deref,
     rc::Rc,
 };
 
@@ -63,7 +64,7 @@ impl Handle {
         Handle(Rc::new(RefCell::new(Object::Eof)))
     }
 
-    pub fn borrow(&self) -> Ref<Object> {
+    pub fn borrow(&self) -> impl Deref<Target = Object> + '_ {
         self.0.borrow()
     }
 }
