@@ -207,8 +207,8 @@ pub fn read(input: &mut Input<impl Read>) -> Handle {
                     ParseState::ListEnd(v)
                 }
                 Some(c) => {
-                    input.push(b'.');
                     input.push(c);
+                    input.push(b'.');
                     v.push(read(input));
                     ParseState::List(v)
                 }
