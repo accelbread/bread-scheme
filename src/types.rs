@@ -37,6 +37,7 @@ pub enum Object {
 // Freeing reference cycles is a future problem
 
 #[derive(Clone, PartialEq, Eq)]
+#[repr(transparent)]
 pub struct Handle(Rc<RefCell<Object>>);
 
 impl Handle {
