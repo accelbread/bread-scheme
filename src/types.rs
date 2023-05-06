@@ -25,7 +25,7 @@ use std::{
 #[derive(Clone, Default, PartialEq, Eq)]
 pub enum Object {
     #[default]
-    Nil,
+    Empty,
     Cons(Handle, Handle),
     Symbol(String),
     Int64(i64),
@@ -40,7 +40,7 @@ pub struct Handle(Rc<RefCell<Object>>);
 
 impl Handle {
     pub fn new_nil() -> Self {
-        Handle(Rc::new(RefCell::new(Object::Nil)))
+        Handle(Rc::new(RefCell::new(Object::Empty)))
     }
 
     pub fn new_cons(car: Handle, cdr: Handle) -> Self {
@@ -72,7 +72,7 @@ impl Display for Handle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self.borrow() {
             Object::Cons(ref car, ref cdr) => write_cons(car, cdr, f),
-            Object::Nil => write!(f, "()"),
+            Object::Empty => write!(f, "()"),
             Object::Symbol(ref x) => write!(f, "{x}"),
             Object::Int64(x) => write!(f, "{x}"),
             Object::String(ref x) => write!(f, "\"{x}\""),
@@ -96,7 +96,7 @@ fn write_cons(car: &Handle, cdr: &Handle, f: &mut fmt::Formatter<'_>) -> fmt::Re
         car.fmt(f)?;
         next = cdr.clone();
     }
-    if let Object::Nil = *next.borrow() {
+    if let Object::Empty = *next.borrow() {
     } else {
         write!(f, " . ")?;
         next.fmt(f)?;
