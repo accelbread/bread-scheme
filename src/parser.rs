@@ -260,3 +260,51 @@ pub fn read(input: &mut Input<impl Read>) -> Handle {
         };
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::io::Cursor;
+
+    use super::*;
+
+    fn read_str(input: &str) -> Handle {
+        read(&mut Input::new(&mut Cursor::new(input)))
+    }
+
+    #[test]
+    fn eof() {
+        assert_eq!(read_str(""), Handle::new_eof());
+        assert_eq!(read_str("   "), Handle::new_eof());
+        assert_eq!(read_str(" \n"), Handle::new_eof());
+    }
+
+    #[test]
+    fn list() {
+        assert_eq!(read_str("()"), Handle::new_nil());
+        assert_eq!(
+            read_str("(1)"),
+            Handle::new_cons(Handle::new_int64(1), Handle::new_nil())
+        );
+        assert_eq!(
+            read_str("(1 2)"),
+            Handle::new_cons(
+                Handle::new_int64(1),
+                Handle::new_cons(Handle::new_int64(2), Handle::new_nil())
+            )
+        );
+        assert_eq!(
+            read_str("(1  2 . 3)"),
+            Handle::new_cons(
+                Handle::new_int64(1),
+                Handle::new_cons(Handle::new_int64(2), Handle::new_int64(3))
+            )
+        );
+        assert_eq!(
+            read_str("(1 .a)"),
+            Handle::new_cons(
+                Handle::new_int64(1),
+                Handle::new_cons(Handle::new_symbol(".a".to_string()), Handle::new_nil())
+            )
+        );
+    }
+}
