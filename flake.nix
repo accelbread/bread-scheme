@@ -19,12 +19,12 @@
 {
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-unstable";
-    flakelite.url = "github:accelbread/flakelite";
-    flakelite-rust.url = "github:accelbread/flakelite-rust";
+    flakelight.url = "github:accelbread/flakelight";
+    flakelight-rust.url = "github:accelbread/flakelight-rust";
   };
-  outputs = { flakelite, ... }@inputs:
-    flakelite ./. {
-      inherit inputs;
-      devTools = pkgs: with pkgs; [ guile ];
-    };
+  outputs = { flakelight, flakelight-rust, ... }@inputs: flakelight ./. {
+    imports = [ flakelight-rust.flakelightModules.default ];
+    inherit inputs;
+    devShell.packages = pkgs: [ pkgs.guile ];
+  };
 }
