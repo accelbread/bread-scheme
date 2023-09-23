@@ -22,11 +22,13 @@
 #![allow(clippy::similar_names)]
 
 mod eval;
+mod input;
 mod parser;
 mod printer;
 mod types;
 
 use crate::eval::eval;
+use crate::input::Input;
 use crate::parser::read;
 use crate::printer::print;
 use crate::types::Object;
@@ -38,7 +40,7 @@ use std::{
 fn main() {
     println!("Welcome to Bread Scheme!");
     let mut handle = &mut io::stdin().lock();
-    let mut input = parser::Input::new(&mut handle);
+    let mut input = Input::new(&mut handle);
     loop {
         if !input.has_pending() {
             print!(">>> ");

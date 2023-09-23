@@ -18,68 +18,8 @@
 
 #![allow(clippy::vec_box)]
 
-use crate::types::Handle;
-use std::{
-    io::{BufReader, ErrorKind, Read},
-    slice,
-};
-
-pub struct Input<'a, S: Read> {
-    stream: BufReader<&'a mut S>,
-    buf: [Option<u8>; 2],
-}
-
-impl<'a, S: Read> Input<'a, S> {
-    pub fn new(stream: &'a mut S) -> Self {
-        Self {
-            stream: BufReader::new(stream),
-            buf: [None, None],
-        }
-    }
-
-    fn get(&mut self) -> Option<u8> {
-        if let Some(c) = self.buf[0] {
-            self.buf[0] = std::mem::take(&mut self.buf[1]);
-            Some(c)
-        } else {
-            let mut c = 0u8;
-            match self.stream.read_exact(slice::from_mut(&mut c)) {
-                Ok(_) => Some(c),
-                Err(e) => match e.kind() {
-                    ErrorKind::UnexpectedEof => None,
-                    _ => panic!("Input error: {e}"),
-                },
-            }
-        }
-    }
-
-    fn push(&mut self, byte: u8) {
-        self.buf[1] = match self.buf[1] {
-            None => self.buf[0],
-            Some(_) => panic!("Pushing byte onto input with no space."),
-        };
-        self.buf[0] = Some(byte);
-    }
-
-    pub fn has_pending(&self) -> bool {
-        self.buf[0].is_some() || !self.stream.buffer().is_empty()
-    }
-
-    pub fn clear_pending_space(&mut self) {
-        while self.has_pending() {
-            let c = self.get();
-            match c {
-                Some(b' ') => (),
-                Some(b'\n') => return,
-                Some(c) => {
-                    self.push(c);
-                    return;
-                }
-                None => unreachable!(),
-            };
-        }
-    }
-}
+use crate::{input::Input, types::Handle};
+use std::io::Read;
 
 #[derive(Default)]
 enum ParseState {
