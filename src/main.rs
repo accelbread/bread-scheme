@@ -33,18 +33,18 @@ use crate::parser::read;
 use crate::printer::print;
 use crate::types::Object;
 use std::{
-    io::{self, Write},
+    io::{self, Result, Write},
     process::exit,
 };
 
-fn main() {
+fn main() -> Result<()> {
     println!("Welcome to Bread Scheme!");
     let mut handle = &mut io::stdin().lock();
     let mut input = Input::new(&mut handle);
     loop {
         if !input.has_pending() {
             print!(">>> ");
-            let _ = io::stdout().flush();
+            io::stdout().flush()?;
         }
         let parsed = read(&mut input);
         if let Object::Eof = *parsed.borrow() {
