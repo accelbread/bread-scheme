@@ -81,27 +81,9 @@ fn make_string(vec: Vec<u8>) -> Handle {
 }
 
 fn is_symbol_char(byte: u8) -> bool {
-    matches!(byte, b'a'..=b'z'
-    | b'A'..=b'Z'
-    | b'0'..=b'9'
-    | b'!'
-    | b'$'
-    | b'%'
-    | b'&'
-    | b'*'
-    | b'+'
-    | b'-'
-    | b'.'
-    | b'/'
-    | b':'
-    | b'<'
-    | b'='
-    | b'>'
-    | b'?'
-    | b'@'
-    | b'^'
-    | b'_'
-    | b'~')
+    matches!(byte,
+             b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'!' | b'$' | b'%' | b'&' | b'*' | b'+' |
+             b'-' | b'.' | b'/' | b':' | b'<' | b'=' | b'>' | b'?' | b'@' | b'^' | b'_' | b'~')
 }
 
 pub fn read(input: &mut Input<impl Read>) -> Handle {
