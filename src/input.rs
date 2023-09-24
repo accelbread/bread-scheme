@@ -25,19 +25,23 @@ use std::{
 
 pub struct Input<'a, S: Read> {
     stream: BufReader<&'a mut S>,
-    buf: [Option<u8>; 2],
+    buffered: usize,
+    buf: [u8; 2],
 }
 
 impl<'a, S: Read> Input<'a, S> {
     pub fn new(stream: &'a mut S) -> Self {
         Self {
             stream: BufReader::new(stream),
-            buf: [None, None],
+            buffered: 0,
+            buf: [0, 0],
         }
     }
 
     pub fn get(&mut self) -> Option<u8> {
-        if let Some(c) = self.buf[0] {
+        if self.buffered > 0 {
+            let c = self.buf[0];
+            self.buffered -= 1;
             self.buf[0] = std::mem::take(&mut self.buf[1]);
             Some(c)
         } else {
@@ -53,15 +57,18 @@ impl<'a, S: Read> Input<'a, S> {
     }
 
     pub fn push(&mut self, byte: u8) {
-        self.buf[1] = match self.buf[1] {
-            None => self.buf[0],
-            Some(_) => panic!("Pushing byte onto input with no space."),
-        };
-        self.buf[0] = Some(byte);
+        assert!(
+            self.buffered < self.buf.len(),
+            "Pushing byte onto input with no space."
+        );
+
+        self.buffered += 1;
+        self.buf[1] = self.buf[0];
+        self.buf[0] = byte;
     }
 
     pub fn has_pending(&self) -> bool {
-        self.buf[0].is_some() || !self.stream.buffer().is_empty()
+        self.buffered > 0 || !self.stream.buffer().is_empty()
     }
 
     pub fn clear_pending_space(&mut self) {
