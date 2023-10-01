@@ -80,6 +80,22 @@ fn make_string(vec: Vec<u8>) -> Handle {
     )
 }
 
+fn is_intraline_whitespace(byte: u8) -> bool {
+    matches!(byte, b' ' | b'\t')
+}
+
+fn is_line_ending(byte: u8) -> bool {
+    matches!(byte, b'\r' | b'\n')
+}
+
+fn is_whitespace(byte: u8) -> bool {
+    is_intraline_whitespace(byte) || is_line_ending(byte)
+}
+
+fn is_delimiter(byte: u8) -> bool {
+    is_whitespace(byte) || matches!(byte, b'|' | b'(' | b')' | b'"' | b';')
+}
+
 fn is_symbol_char(byte: u8) -> bool {
     matches!(byte,
              b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'!' | b'$' | b'%' | b'&' | b'*' | b'+' |
@@ -92,7 +108,7 @@ pub fn read(input: &mut Input<impl Read>) -> Handle {
         let c = input.get();
         state = match state {
             ParseState::None => match c {
-                Some(b' ' | b'\t' | b'\n') => ParseState::None,
+                Some(c) if is_whitespace(c) => ParseState::None,
                 Some(b'(') => ParseState::List(Vec::new()),
                 Some(b'"') => ParseState::String(Vec::new()),
                 Some(b'\'') => {
@@ -102,14 +118,13 @@ pub fn read(input: &mut Input<impl Read>) -> Handle {
                         Handle::new_nil(),
                     ]);
                 }
-                Some(b')') => panic!("Error parsing: unexpected `)`."),
                 Some(c @ (b'0'..=b'9' | b'-' | b'+')) => ParseState::Int(vec![c]),
                 Some(c) if is_symbol_char(c) => ParseState::Symbol(vec![c]),
                 Some(c) => panic!("Error parsing: unexpected `{}`.", c.escape_ascii()),
                 None => return Handle::new_eof(),
             },
             ParseState::List(mut v) => match c {
-                Some(b'\n' | b' ') => ParseState::List(v),
+                Some(c) if is_whitespace(c) => ParseState::List(v),
                 Some(b')') => {
                     v.push(Handle::new_nil());
                     return make_list(v);
@@ -123,7 +138,8 @@ pub fn read(input: &mut Input<impl Read>) -> Handle {
                 None => panic!("Error parsing list: unexpected EOF."),
             },
             ParseState::MaybeDot(mut v) => match c {
-                Some(b' ' | b'\t' | b'\n') => {
+                Some(c) if is_delimiter(c) => {
+                    input.push(c);
                     assert!(!v.is_empty(), "Error parsing list: unexpected `.`");
                     v.push(read(input));
                     ParseState::ListEnd(v)
@@ -227,6 +243,17 @@ mod tests {
                 Handle::new_int64(1),
                 Handle::new_cons(Handle::new_symbol(".a".to_string()), Handle::new_nil())
             )
+        );
+        assert_eq!(
+            read_str("(1 .(a))"),
+            Handle::new_cons(
+                Handle::new_int64(1),
+                Handle::new_cons(Handle::new_symbol("a".to_string()), Handle::new_nil())
+            )
+        );
+        assert_eq!(
+            read_str("(1 .\"a\"))"),
+            Handle::new_cons(Handle::new_int64(1), Handle::new_string("a".to_string()))
         );
     }
 }
