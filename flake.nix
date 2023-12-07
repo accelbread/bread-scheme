@@ -17,12 +17,8 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 {
-  inputs = {
-    nixpkgs.url = "nixpkgs/nixos-unstable";
-    flakelight-rust.url = "github:accelbread/flakelight-rust";
-  };
-  outputs = { flakelight-rust, ... }@inputs: flakelight-rust ./. {
-    inherit inputs;
+  inputs.flakelight-rust.url = "github:accelbread/flakelight-rust";
+  outputs = { flakelight-rust, ... }: flakelight-rust ./. {
     devShell.packages = pkgs: [ pkgs.guile ];
   };
 }
