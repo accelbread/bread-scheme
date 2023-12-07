@@ -47,7 +47,7 @@ impl<'a, S: Read> Input<'a, S> {
         } else {
             let mut c = 0u8;
             match self.stream.read_exact(slice::from_mut(&mut c)) {
-                Ok(_) => Some(c),
+                Ok(()) => Some(c),
                 Err(e) => match e.kind() {
                     ErrorKind::UnexpectedEof => None,
                     _ => panic!("Input error: {e}"),
