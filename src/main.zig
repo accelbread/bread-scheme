@@ -19,7 +19,13 @@
 const std = @import("std");
 const os = std.os;
 
+const object = @import("object.zig");
+
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
     try stdout.print("Welcome to Bread Scheme!\n", .{});
+}
+
+test {
+    _ = object;
 }
