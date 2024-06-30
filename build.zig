@@ -34,19 +34,16 @@ pub fn build(b: *std.Build) void {
 
     const exe = b.addExecutable(.{
         .name = "bread-scheme",
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
+        .strip = optimize != .Debug,
+        .single_threaded = true,
     });
 
     exe.pie = true;
-
-    if (optimize == .Debug) {
-        exe.compress_debug_sections = .zlib;
-    } else {
-        exe.strip = true;
-        exe.want_lto = true;
-    }
+    exe.want_lto = optimize != .Debug;
+    exe.compress_debug_sections = .zlib;
 
     b.installArtifact(exe);
 
@@ -59,7 +56,7 @@ pub fn build(b: *std.Build) void {
     run_step.dependOn(&run_cmd.step);
 
     const unit_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });

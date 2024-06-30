@@ -22,6 +22,6 @@
   outputs = { flakelight-zig, ... }:
     flakelight-zig ./. {
       license = "AGPL-3.0-or-later";
-      zigFlags = [ "-Drelease" ];
+      zigFlags = [ "--release" ];
     };
 }

@@ -78,49 +78,49 @@ pub const Object = union(enum) {
         gpa: Allocator,
 
         pub fn boolean(self: Factory, value: bool) !*Object {
-            var ret = try self.gpa.create(Object);
+            const ret = try self.gpa.create(Object);
             ret.* = .{ .boolean = value };
             return ret;
         }
 
         pub fn char(self: Factory, value: u8) !*Object {
-            var ret = try self.gpa.create(Object);
+            const ret = try self.gpa.create(Object);
             ret.* = .{ .char = value };
             return ret;
         }
 
         pub fn empty(self: Factory) !*Object {
-            var ret = try self.gpa.create(Object);
+            const ret = try self.gpa.create(Object);
             ret.* = .empty;
             return ret;
         }
 
         pub fn cons(self: Factory, car: *Object, cdr: *Object) !*Object {
-            var ret = try self.gpa.create(Object);
+            const ret = try self.gpa.create(Object);
             ret.* = .{ .pair = .{ .car = car, .cdr = cdr } };
             return ret;
         }
 
         pub fn symbol(self: Factory, value: []const u8) !*Object {
-            var ret = try self.gpa.create(Object);
+            const ret = try self.gpa.create(Object);
             ret.* = .{ .symbol = value };
             return ret;
         }
 
         pub fn number(self: Factory, value: i64) !*Object {
-            var ret = try self.gpa.create(Object);
+            const ret = try self.gpa.create(Object);
             ret.* = .{ .number = value };
             return ret;
         }
 
         pub fn string(self: Factory, value: []const u8) !*Object {
-            var ret = try self.gpa.create(Object);
+            const ret = try self.gpa.create(Object);
             ret.* = .{ .string = value };
             return ret;
         }
 
         pub fn eof(self: Factory) !*Object {
-            var ret = try self.gpa.create(Object);
+            const ret = try self.gpa.create(Object);
             ret.* = .eof;
             return ret;
         }
@@ -129,10 +129,10 @@ pub const Object = union(enum) {
 
 test "allocate objects" {
     var alloc = Object.factory(std.testing.allocator);
-    var v1 = try alloc.empty();
+    const v1 = try alloc.empty();
     defer std.testing.allocator.destroy(v1);
-    var v2 = try alloc.string("hi");
+    const v2 = try alloc.string("hi");
     defer std.testing.allocator.destroy(v2);
-    var v3 = try alloc.cons(v1, v2);
+    const v3 = try alloc.cons(v1, v2);
     defer std.testing.allocator.destroy(v3);
 }
